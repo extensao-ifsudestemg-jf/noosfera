@@ -1,0 +1,39 @@
+# Binários Go e Executáveis
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+noosfera
+noosfera-*
+buscador-artigos-*
+
+# Testes e Cobertura
+*.test
+*.out
+coverage.out
+
+# Diretórios de Build / Distribuição
+bin/
+dist/
+build/
+*.tmp
+
+# Ferramentas de IDE e Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Arquivos de Sistema Operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Variáveis locais e Logs
+.env
+.env.local
+*.log

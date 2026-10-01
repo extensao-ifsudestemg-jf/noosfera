@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noosfera | Motor de Busca Acadêmico</title>
+    <meta name="description" content="Noosfera - Dashboard acadêmico de busca concorrente em múltiplas fontes (OpenAlex e CrossRef) com filtros avançados e exportação.">
+    
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('theme');
+                const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const initialTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', initialTheme);
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <header class="app-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="header-brand">
+                    <div class="brand-icon-wrapper">
+                        <img src="assets/logo.svg" alt="Noosfera Logo" class="brand-logo" width="28" height="28">
+                    </div>
+                    <div class="brand-text">
+                        <h1>Noosfera</h1>
+                        <p class="subtitle">Motor de busca concorrente e agregação bibliográfica local</p>
+                    </div>
+                </div>
+                <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Alternar tema de cores" title="Alternar tema de cores">
+                    <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        
+        <section class="card search-section" aria-label="Busca e Filtros">
+            <div class="search-bar">
+                <div class="input-group search-input-group">
+                    <label for="searchInput" class="sr-only">Termo de Busca</label>
+                    <div class="search-input-wrapper">
+                        <svg class="search-field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="searchInput" placeholder="Digite termos, temas ou autores (ex: quantum computing, machine learning...)" autofocus>
+                    </div>
+                </div>
+                <div class="input-group limit-input-group">
+                    <label for="limitInput" class="input-label">Limite / Fonte</label>
+                    <input type="number" id="limitInput" value="20" min="1" max="1000" title="Limite de resultados por provedor">
+                </div>
+                <button id="searchButton" class="btn btn-primary" type="button">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <span>Buscar</span>
+                </button>
+            </div>
+
+            <div class="filters-toggle-wrapper">
+                <button id="toggleFiltersBtn" class="btn btn-link" type="button" aria-expanded="false" aria-controls="filtersPanel">
+                    <span>Filtros Avançados</span>
+                    <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="filtersPanel" class="filters-panel collapsed">
+                <div class="filters-panel-inner">
+                    <div class="filters-grid">
+                        <div class="input-group">
+                            <label for="yearStart">Ano Início</label>
+                            <input type="number" id="yearStart" placeholder="Ex: 2018" min="1800" max="2100">
+                        </div>
+                        <div class="input-group">
+                            <label for="yearEnd">Ano Fim</label>
+                            <input type="number" id="yearEnd" placeholder="Ex: 2026" min="1800" max="2100">
+                        </div>
+                        <div class="input-group">
+                            <label for="minCitations">Citações Mínimas</label>
+                            <input type="number" id="minCitations" placeholder="Ex: 10" min="0">
+                        </div>
+                        <div class="input-group">
+                            <label for="journalKeyword">Palavra-chave do Periódico</label>
+                            <input type="text" id="journalKeyword" placeholder="Ex: Nature, IEEE, Springer...">
+                        </div>
+                        <div class="input-group input-group-full">
+                            <label for="crossref-email">E-mail de Contato (CrossRef Polite Pool)</label>
+                            <input type="email" id="crossref-email" placeholder="seu-email@instituicao.edu.br">
+                            <div class="field-hint">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                                <span>Opcional. Habilita a fila expressa (Polite Pool) da CrossRef para maior velocidade e prioridade de resposta.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card controls-section" aria-label="Visualização e Exportação">
+            <div class="controls-content">
+                <div class="column-visibility">
+                    <span class="control-label">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="12" y1="3" x2="12" y2="21"></line>
+                        </svg>
+                        Exibir Colunas:
+                    </span>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label"><input type="checkbox" class="col-toggle" data-col="col-title" checked> Título</label>
+                        <label class="checkbox-label"><input type="checkbox" class="col-toggle" data-col="col-authors" checked> Autores</label>
+                        <label class="checkbox-label"><input type="checkbox" class="col-toggle" data-col="col-year" checked> Ano</label>
+                        <label class="checkbox-label"><input type="checkbox" class="col-toggle" data-col="col-journal" checked> Periódico</label>
+                        <label class="checkbox-label"><input type="checkbox" class="col-toggle" data-col="col-citations" checked> Citações</label>
+                        <label class="checkbox-label"><input type="checkbox" class="col-toggle" data-col="col-doi" checked> DOI</label>
+                        <label class="checkbox-label"><input type="checkbox" class="col-toggle" data-col="col-source" checked> Fonte</label>
+                    </div>
+                </div>
+                
+                <div class="export-actions">
+                    <button id="exportCsvBtn" class="btn btn-export" type="button" title="Exportar dados filtrados em formato CSV">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span>CSV</span>
+                    </button>
+                    <button id="exportXlsxBtn" class="btn btn-export" type="button" title="Exportar dados filtrados em formato XLSX">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        <span>XLSX</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="results-section" aria-label="Resultados da Busca">
+            
+            <div id="loadingIndicator" class="feedback-container hidden" role="status" aria-live="polite">
+                <div class="spinner"></div>
+                <div class="loading-text">Consultando provedores de forma concorrente...</div>
+                <div class="loading-subtext">Buscando em tempo real no OpenAlex e CrossRef</div>
+            </div>
+
+            <div id="errorMessage" class="error-message hidden" role="alert">
+                <div class="error-icon-wrapper">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <span id="errorText">Ocorreu um erro ao buscar os artigos.</span>
+            </div>
+
+            <div class="table-container">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th class="col-title" scope="col">Título</th>
+                            <th class="col-authors" scope="col">Autores</th>
+                            <th class="col-year text-center" scope="col">Ano</th>
+                            <th class="col-journal" scope="col">Periódico</th>
+                            <th class="col-citations text-right" scope="col">Citações</th>
+                            <th class="col-doi" scope="col">DOI</th>
+                            <th class="col-source text-center" scope="col">Fonte</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        
+                        <tr id="emptyStateRow">
+                            <td colspan="7" class="empty-state">
+                                <div class="empty-state-icon">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    </svg>
+                                </div>
+                                <p class="empty-title">Nenhuma busca realizada</p>
+                                <p class="empty-subtitle">Digite um termo no campo de pesquisa acima para iniciar a consulta simultânea nos provedores.</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
