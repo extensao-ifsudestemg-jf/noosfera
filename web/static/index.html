@@ -84,6 +84,22 @@
                 </button>
             </div>
 
+            <div class="providers-row">
+                <span class="providers-label">Fontes:</span>
+                <div class="provider-chips" role="group" aria-label="Seleção de bases científicas">
+                    <label class="provider-chip">
+                        <input type="checkbox" id="providerOpenAlex" class="provider-toggle" value="openalex" checked>
+                        <span class="provider-badge-indicator openalex-dot"></span>
+                        <span>OpenAlex</span>
+                    </label>
+                    <label class="provider-chip">
+                        <input type="checkbox" id="providerCrossRef" class="provider-toggle" value="crossref" checked>
+                        <span class="provider-badge-indicator crossref-dot"></span>
+                        <span>CrossRef</span>
+                    </label>
+                </div>
+            </div>
+
             <div class="filters-toggle-wrapper">
                 <button id="toggleFiltersBtn" class="btn btn-link" type="button" aria-expanded="false" aria-controls="filtersPanel">
                     <span>Filtros Avançados</span>
@@ -151,7 +167,8 @@
                 </div>
                 
                 <div class="export-actions">
-                    <button id="exportCsvBtn" class="btn btn-export" type="button" title="Exportar dados filtrados em formato CSV">
+                    <span id="selectionCounter" class="selection-counter hidden">0 de 0 artigos selecionados</span>
+                    <button id="exportCsvBtn" class="btn btn-export" type="button" title="Exportar dados selecionados em formato CSV" disabled>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
@@ -159,7 +176,7 @@
                         </svg>
                         <span>CSV</span>
                     </button>
-                    <button id="exportXlsxBtn" class="btn btn-export" type="button" title="Exportar dados filtrados em formato XLSX">
+                    <button id="exportXlsxBtn" class="btn btn-export" type="button" title="Exportar dados selecionados em formato XLSX" disabled>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                             <polyline points="14 2 14 8 20 8"></polyline>
@@ -196,6 +213,9 @@
                 <table id="resultsTable">
                     <thead>
                         <tr>
+                            <th class="col-select text-center" scope="col">
+                                <input type="checkbox" id="selectAllCheckbox" aria-label="Selecionar todos os artigos" title="Selecionar todos os artigos" disabled>
+                            </th>
                             <th class="col-title" scope="col">Título</th>
                             <th class="col-authors" scope="col">Autores</th>
                             <th class="col-year text-center" scope="col">Ano</th>
@@ -208,7 +228,7 @@
                     <tbody id="resultsBody">
                         
                         <tr id="emptyStateRow">
-                            <td colspan="7" class="empty-state">
+                            <td colspan="8" class="empty-state">
                                 <div class="empty-state-icon">
                                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                                         <circle cx="11" cy="11" r="8"></circle>

@@ -5,11 +5,12 @@ import (
 )
 
 type SearchRequestDTO struct {
-	Query        string `json:"query"`
-	Limit        int    `json:"limit"`
-	MinYear      int    `json:"min_year"`
-	MinCitations int    `json:"min_citations"`
-	UserEmail    string `json:"user_email,omitempty"`
+	Query        string   `json:"query"`
+	Limit        int      `json:"limit"`
+	MinYear      int      `json:"min_year"`
+	MinCitations int      `json:"min_citations"`
+	UserEmail    string   `json:"user_email,omitempty"`
+	Providers    []string `json:"providers,omitempty"`
 }
 
 type SearchResponseDTO struct {

@@ -289,3 +289,45 @@ func TestSearchRequestDTO_UserEmail(t *testing.T) {
 		t.Errorf("esperado que user_email fosse omitido com omitempty, obtido: %s", string(bytesOut))
 	}
 }
+
+func TestSearchRequestDTO_Providers(t *testing.T) {
+	jsonData := `{"query":"quantum","limit":10,"providers":["openalex","crossref"]}`
+	var req handlers.SearchRequestDTO
+	if err := json.Unmarshal([]byte(jsonData), &req); err != nil {
+		t.Fatalf("falha ao desserializar SearchRequestDTO: %v", err)
+	}
+	if len(req.Providers) != 2 || req.Providers[0] != "openalex" || req.Providers[1] != "crossref" {
+		t.Errorf("esperado providers [openalex, crossref], obtido %v", req.Providers)
+	}
+}
+
+type ProviderCapturingSearchUseCase struct {
+	CapturedFilter domain.SearchFilter
+}
+
+func (p *ProviderCapturingSearchUseCase) Execute(ctx context.Context, query string, limit int, filter domain.SearchFilter) (*usecase.SearchResult, error) {
+	p.CapturedFilter = filter
+	return &usecase.SearchResult{Articles: []domain.Article{}}, nil
+}
+
+func TestArticleHandler_HandleSearch_ProvidersQueryParam(t *testing.T) {
+	mockUC := &ProviderCapturingSearchUseCase{}
+	handler := handlers.NewArticleHandler(mockUC)
+
+	body := bytes.NewBufferString(`{"query":"deep learning","limit":10}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/search?providers=openalex,crossref", body)
+	rec := httptest.NewRecorder()
+
+	handler.HandleSearch(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("esperado status 200, obtido %d", rec.Code)
+	}
+	if len(mockUC.CapturedFilter.Providers) != 2 {
+		t.Fatalf("esperado 2 providers capturados, obtido %d", len(mockUC.CapturedFilter.Providers))
+	}
+	if mockUC.CapturedFilter.Providers[0] != "openalex" || mockUC.CapturedFilter.Providers[1] != "crossref" {
+		t.Errorf("providers capturados incorretos: %v", mockUC.CapturedFilter.Providers)
+	}
+}
+

@@ -49,9 +49,29 @@ func (h *ArticleHandler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var cleanProviders []string
+	if len(req.Providers) == 0 {
+		if provQuery := r.URL.Query().Get("providers"); provQuery != "" {
+			for _, p := range strings.Split(provQuery, ",") {
+				if trimmed := strings.TrimSpace(p); trimmed != "" {
+					cleanProviders = append(cleanProviders, trimmed)
+				}
+			}
+		}
+	} else {
+		for _, p := range req.Providers {
+			for _, sub := range strings.Split(p, ",") {
+				if trimmed := strings.TrimSpace(sub); trimmed != "" {
+					cleanProviders = append(cleanProviders, trimmed)
+				}
+			}
+		}
+	}
+
 	filter := domain.SearchFilter{
 		MinYear:      req.MinYear,
 		MinCitations: req.MinCitations,
+		Providers:    cleanProviders,
 	}
 
 	ctx := r.Context()

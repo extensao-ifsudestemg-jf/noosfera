@@ -173,7 +173,22 @@ func (uc *SearchArticlesUseCase) Execute(ctx context.Context, query string, limi
 		limit = 20
 	}
 
-	numProviders := len(uc.providers)
+	activeProviders := uc.providers
+	if len(filter.Providers) > 0 {
+		requestedMap := make(map[string]bool)
+		for _, p := range filter.Providers {
+			requestedMap[strings.ToLower(strings.TrimSpace(p))] = true
+		}
+		var filteredProviders []domain.ArticleProvider
+		for _, p := range uc.providers {
+			if requestedMap[strings.ToLower(p.GetSourceID())] {
+				filteredProviders = append(filteredProviders, p)
+			}
+		}
+		activeProviders = filteredProviders
+	}
+
+	numProviders := len(activeProviders)
 	if numProviders == 0 {
 		return &SearchResult{
 			Articles:        make([]domain.Article, 0),
@@ -186,7 +201,7 @@ func (uc *SearchArticlesUseCase) Execute(ctx context.Context, query string, limi
 	ch := make(chan providerResult, numProviders)
 	var wg sync.WaitGroup
 
-	for i, p := range uc.providers {
+	for i, p := range activeProviders {
 		wg.Add(1)
 		go func(idx int, provider domain.ArticleProvider) {
 			defer wg.Done()
@@ -346,7 +361,7 @@ func (uc *SearchArticlesUseCase) Execute(ctx context.Context, query string, limi
 	}
 
 	sourceStats := make(map[string]int)
-	for _, p := range uc.providers {
+	for _, p := range activeProviders {
 		sourceStats[p.GetSourceID()] = 0
 	}
 	for _, article := range finalArticles {

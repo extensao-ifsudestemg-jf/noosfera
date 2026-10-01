@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     let currentArticles = [];
+    let selectedIds = new Set();
 
     const searchInput = document.getElementById('searchInput');
     const limitInput = document.getElementById('limitInput');
@@ -16,6 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const exportCsvBtn = document.getElementById('exportCsvBtn');
     const exportXlsxBtn = document.getElementById('exportXlsxBtn');
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const selectionCounter = document.getElementById('selectionCounter');
     
     const loadingIndicator = document.getElementById('loadingIndicator');
     const errorMessage = document.getElementById('errorMessage');
@@ -89,6 +92,79 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', (e) => {
+            const checkAll = e.target.checked;
+            if (checkAll) {
+                currentArticles.forEach(a => selectedIds.add(a._id));
+            } else {
+                selectedIds.clear();
+            }
+            const cbs = resultsBody.querySelectorAll('.article-checkbox');
+            cbs.forEach(cb => {
+                cb.checked = checkAll;
+                const row = cb.closest('tr');
+                if (row) {
+                    row.classList.toggle('row-selected', checkAll);
+                }
+            });
+            updateSelectionUI();
+        });
+    }
+
+    function updateSelectionUI() {
+        const total = currentArticles.length;
+        const selectedCount = currentArticles.filter(a => selectedIds.has(a._id)).length;
+
+        if (total === 0) {
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.disabled = true;
+            }
+            if (selectionCounter) {
+                selectionCounter.classList.add('hidden');
+                selectionCounter.classList.remove('has-selection');
+                selectionCounter.textContent = '0 de 0 artigos selecionados';
+            }
+            if (exportCsvBtn) exportCsvBtn.disabled = true;
+            if (exportXlsxBtn) exportXlsxBtn.disabled = true;
+            return;
+        }
+
+        if (selectAllCheckbox) selectAllCheckbox.disabled = false;
+        if (selectionCounter) {
+            selectionCounter.classList.remove('hidden');
+            selectionCounter.textContent = `${selectedCount} de ${total} artigos selecionados`;
+        }
+
+        if (selectedCount === 0) {
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+            if (selectionCounter) selectionCounter.classList.remove('has-selection');
+            if (exportCsvBtn) exportCsvBtn.disabled = true;
+            if (exportXlsxBtn) exportXlsxBtn.disabled = true;
+        } else if (selectedCount === total) {
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            }
+            if (selectionCounter) selectionCounter.classList.add('has-selection');
+            if (exportCsvBtn) exportCsvBtn.disabled = false;
+            if (exportXlsxBtn) exportXlsxBtn.disabled = false;
+        } else {
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            }
+            if (selectionCounter) selectionCounter.classList.add('has-selection');
+            if (exportCsvBtn) exportCsvBtn.disabled = false;
+            if (exportXlsxBtn) exportXlsxBtn.disabled = false;
+        }
+    }
+
     if (searchButton) {
         searchButton.addEventListener('click', performSearch);
     }
@@ -123,17 +199,39 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('crossref_email');
         }
 
+        const providerCheckboxes = document.querySelectorAll('.provider-toggle');
+        const selectedProviders = [];
+        providerCheckboxes.forEach(cb => {
+            if (cb.checked) {
+                selectedProviders.push(cb.value);
+            }
+        });
+
+        if (selectedProviders.length === 0) {
+            showError('Selecione pelo menos uma fonte de busca (OpenAlex ou CrossRef).');
+            return;
+        }
+
+        const loadingSubtext = document.querySelector('.loading-subtext');
+        if (loadingSubtext) {
+            const providerNames = selectedProviders.map(p => p.toLowerCase() === 'openalex' ? 'OpenAlex' : (p.toLowerCase() === 'crossref' ? 'CrossRef' : p));
+            loadingSubtext.textContent = `Buscando em tempo real: ${providerNames.join(' e ')}`;
+        }
+
         loadingIndicator.classList.remove('hidden');
         errorMessage.classList.add('hidden');
         resultsBody.innerHTML = '';
         searchButton.disabled = true;
+        selectedIds.clear();
+        updateSelectionUI();
 
         try {
             const searchPayload = {
                 query: query,
                 limit: limit,
                 min_year: minYear,
-                min_citations: minCitations
+                min_citations: minCitations,
+                providers: selectedProviders
             };
 
             if (userEmail) {
@@ -171,12 +269,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
             }
 
+            filteredArticles.forEach((a, idx) => {
+                if (!a._id) {
+                    a._id = a.id || a.doi || ('art_' + idx + '_' + Date.now());
+                }
+            });
+
             currentArticles = filteredArticles;
+            currentArticles.forEach(a => selectedIds.add(a._id));
             renderTable(filteredArticles);
 
         } catch (error) {
             showError(error.message);
             currentArticles = [];
+            selectedIds.clear();
+            updateSelectionUI();
         } finally {
             loadingIndicator.classList.add('hidden');
             searchButton.disabled = false;
@@ -189,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (articles.length === 0) {
             resultsBody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="empty-state">
+                    <td colspan="8" class="empty-state">
                         <div class="empty-state-icon">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="11" cy="11" r="8"></circle>
@@ -200,11 +307,46 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="empty-subtitle">Tente ajustar os termos de busca ou remover alguns filtros aplicados.</p>
                     </td>
                 </tr>`;
+            updateSelectionUI();
             return;
         }
 
         articles.forEach(article => {
             const tr = document.createElement('tr');
+            const isSelected = selectedIds.has(article._id);
+            if (isSelected) {
+                tr.classList.add('row-selected');
+            }
+
+            const tdSelect = document.createElement('td');
+            tdSelect.className = 'col-select text-center';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'article-checkbox';
+            cb.dataset.id = article._id;
+            cb.checked = isSelected;
+            cb.setAttribute('aria-label', `Selecionar artigo ${article.title || ''}`);
+            tdSelect.appendChild(cb);
+            tr.appendChild(tdSelect);
+
+            cb.addEventListener('change', (e) => {
+                e.stopPropagation();
+                if (cb.checked) {
+                    selectedIds.add(article._id);
+                    tr.classList.add('row-selected');
+                } else {
+                    selectedIds.delete(article._id);
+                    tr.classList.remove('row-selected');
+                }
+                updateSelectionUI();
+            });
+
+            tdSelect.addEventListener('click', (e) => {
+                if (e.target !== cb) {
+                    cb.checked = !cb.checked;
+                    cb.dispatchEvent(new Event('change'));
+                }
+            });
             
             const titleContent = article.url 
                 ? `<a href="${article.url}" target="_blank" rel="noopener noreferrer" title="Acessar publicação">${article.title}</a>`
@@ -225,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const providerName = article.source_provider || 'Desconhecido';
             const providerClass = providerName.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-            tr.innerHTML = `
+            const colsHtml = `
                 <td class="col-title">${titleContent}</td>
                 <td class="col-authors">${authorsStr}</td>
                 <td class="col-year text-center">${year}</td>
@@ -234,6 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="col-doi">${doiContent}</td>
                 <td class="col-source text-center"><span class="source-badge source-${providerClass}">${providerName}</span></td>
             `;
+            tr.insertAdjacentHTML('beforeend', colsHtml);
             resultsBody.appendChild(tr);
         });
 
@@ -243,6 +386,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultsBody.querySelectorAll(`.${colClass}`).forEach(el => el.classList.add('col-hidden'));
             }
         });
+
+        updateSelectionUI();
     }
 
     function showError(msg) {
@@ -250,12 +395,75 @@ document.addEventListener('DOMContentLoaded', () => {
         errorMessage.classList.remove('hidden');
     }
 
+    function exportToXmlSpreadsheet(articles) {
+        const escapeXml = (str) => {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+        };
+
+        let rowsXml = '';
+        const headers = ['ID', 'Título', 'Autores', 'Ano', 'DOI', 'URL', 'Periódico', 'Citações', 'Resumo', 'Provedor'];
+        rowsXml += '<Row>';
+        headers.forEach(h => {
+            rowsXml += `<Cell><Data ss:Type="String">${escapeXml(h)}</Data></Cell>`;
+        });
+        rowsXml += '</Row>';
+
+        articles.forEach(a => {
+            const authors = a.authors && a.authors.length ? a.authors.join(', ') : '';
+            const year = a.year || a.publication_year || a.publicationYear || '';
+            const citations = a.citations !== undefined ? a.citations : (a.citation_count || 0);
+            rowsXml += '<Row>';
+            rowsXml += `<Cell><Data ss:Type="String">${escapeXml(a.id || '')}</Data></Cell>`;
+            rowsXml += `<Cell><Data ss:Type="String">${escapeXml(a.title || '')}</Data></Cell>`;
+            rowsXml += `<Cell><Data ss:Type="String">${escapeXml(authors)}</Data></Cell>`;
+            rowsXml += `<Cell><Data ss:Type="Number">${escapeXml(year)}</Data></Cell>`;
+            rowsXml += `<Cell><Data ss:Type="String">${escapeXml(a.doi || '')}</Data></Cell>`;
+            rowsXml += `<Cell><Data ss:Type="String">${escapeXml(a.url || '')}</Data></Cell>`;
+            rowsXml += `<Cell><Data ss:Type="String">${escapeXml(a.journal || '')}</Data></Cell>`;
+            rowsXml += `<Cell><Data ss:Type="Number">${escapeXml(citations)}</Data></Cell>`;
+            rowsXml += `<Cell><Data ss:Type="String">${escapeXml(a.abstract || '')}</Data></Cell>`;
+            rowsXml += `<Cell><Data ss:Type="String">${escapeXml(a.source_provider || '')}</Data></Cell>`;
+            rowsXml += '</Row>';
+        });
+
+        const xmlTemplate = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Worksheet ss:Name="Artigos">
+  <Table>
+   ${rowsXml}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+
+        const blob = new Blob([xmlTemplate], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'noosfera_artigos.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
     if (exportCsvBtn) exportCsvBtn.addEventListener('click', () => exportData('csv'));
     if (exportXlsxBtn) exportXlsxBtn.addEventListener('click', () => exportData('xlsx'));
 
     async function exportData(format) {
-        if (!currentArticles || currentArticles.length === 0) {
-            alert('Realize uma busca primeiro e garanta que há artigos para exportar.');
+        const selectedArticles = currentArticles.filter(a => selectedIds.has(a._id));
+        if (!selectedArticles || selectedArticles.length === 0) {
+            alert('Nenhum artigo selecionado para exportação. Selecione pelo menos um artigo.');
             return;
         }
 
@@ -264,12 +472,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    articles: currentArticles,
+                    articles: selectedArticles,
                     format: format
                 })
             });
 
             if (!response.ok) {
+                if (format === 'xlsx') {
+                    exportToXmlSpreadsheet(selectedArticles);
+                    return;
+                }
                 const errData = await response.json().catch(() => null);
                 const errorMsg = errData && errData.detail ? errData.detail : `Erro na exportação (Status: ${response.status})`;
                 throw new Error(errorMsg);
@@ -286,7 +498,13 @@ document.addEventListener('DOMContentLoaded', () => {
             URL.revokeObjectURL(url);
             
         } catch (error) {
-            alert(`Falha ao exportar: ${error.message}`);
+            if (format === 'xlsx') {
+                exportToXmlSpreadsheet(selectedArticles);
+            } else {
+                alert(`Falha ao exportar: ${error.message}`);
+            }
         }
     }
+
+    updateSelectionUI();
 });

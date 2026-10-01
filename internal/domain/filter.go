@@ -7,6 +7,7 @@ type SearchFilter struct {
 	MaxYear        int
 	MinCitations   int
 	JournalKeyword string
+	Providers      []string
 }
 
 func (f SearchFilter) Apply(articles []Article) []Article {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -16,9 +17,11 @@ type MockProvider struct {
 	Articles []domain.Article
 	Err      error
 	Delay    time.Duration
+	Calls    int32
 }
 
 func (m *MockProvider) FetchArticles(ctx context.Context, query string, limit int) ([]domain.Article, error) {
+	atomic.AddInt32(&m.Calls, 1)
 	if m.Delay > 0 {
 		timer := time.NewTimer(m.Delay)
 		defer timer.Stop()
@@ -372,6 +375,105 @@ func TestSearchArticlesUseCase_DeduplicationAndInterleaving(t *testing.T) {
 			if res.Articles[i].ID != expID {
 				t.Errorf("posição %d: esperado ID '%s', obtido '%s'", i, expID, res.Articles[i].ID)
 			}
+		}
+	})
+}
+
+func TestSearchArticlesUseCase_SelectiveFanOut(t *testing.T) {
+	t.Run("Apenas OpenAlex Selecionado", func(t *testing.T) {
+		mockOpenAlex := &MockProvider{
+			SourceID: "OpenAlex",
+			Articles: []domain.Article{
+				{ID: "OA-1", Title: "Article OpenAlex"},
+			},
+		}
+		mockCrossRef := &MockProvider{
+			SourceID: "CrossRef",
+			Articles: []domain.Article{
+				{ID: "CR-1", Title: "Article CrossRef"},
+			},
+		}
+
+		uc := usecase.NewSearchArticlesUseCase([]domain.ArticleProvider{mockOpenAlex, mockCrossRef})
+		filter := domain.SearchFilter{
+			Providers: []string{"OpenAlex"},
+		}
+
+		res, err := uc.Execute(context.Background(), "test", 10, filter)
+		if err != nil {
+			t.Fatalf("erro inesperado: %v", err)
+		}
+
+		if atomic.LoadInt32(&mockOpenAlex.Calls) != 1 {
+			t.Errorf("esperado 1 chamada para OpenAlex, obtido %d", atomic.LoadInt32(&mockOpenAlex.Calls))
+		}
+		if atomic.LoadInt32(&mockCrossRef.Calls) != 0 {
+			t.Errorf("esperado 0 chamadas para CrossRef, obtido %d", atomic.LoadInt32(&mockCrossRef.Calls))
+		}
+		if len(res.Articles) != 1 || res.Articles[0].ID != "OA-1" {
+			t.Errorf("esperado apenas artigo de OpenAlex, obtido: %v", res.Articles)
+		}
+		if _, exists := res.SourceStats["CrossRef"]; exists {
+			t.Errorf("CrossRef nao deveria estar em SourceStats quando desativado")
+		}
+	})
+
+	t.Run("Case Insensitive Provider Selection", func(t *testing.T) {
+		mockOpenAlex := &MockProvider{
+			SourceID: "OpenAlex",
+			Articles: []domain.Article{
+				{ID: "OA-1", Title: "Article OpenAlex"},
+			},
+		}
+		mockCrossRef := &MockProvider{
+			SourceID: "CrossRef",
+			Articles: []domain.Article{
+				{ID: "CR-1", Title: "Article CrossRef"},
+			},
+		}
+
+		uc := usecase.NewSearchArticlesUseCase([]domain.ArticleProvider{mockOpenAlex, mockCrossRef})
+		filter := domain.SearchFilter{
+			Providers: []string{"crossref"},
+		}
+
+		res, err := uc.Execute(context.Background(), "test", 10, filter)
+		if err != nil {
+			t.Fatalf("erro inesperado: %v", err)
+		}
+
+		if atomic.LoadInt32(&mockCrossRef.Calls) != 1 {
+			t.Errorf("esperado 1 chamada para CrossRef, obtido %d", atomic.LoadInt32(&mockCrossRef.Calls))
+		}
+		if atomic.LoadInt32(&mockOpenAlex.Calls) != 0 {
+			t.Errorf("esperado 0 chamadas para OpenAlex, obtido %d", atomic.LoadInt32(&mockOpenAlex.Calls))
+		}
+		if len(res.Articles) != 1 || res.Articles[0].ID != "CR-1" {
+			t.Errorf("esperado apenas artigo de CrossRef, obtido: %v", res.Articles)
+		}
+	})
+
+	t.Run("Nenhum Provedor Correspondente", func(t *testing.T) {
+		mockOpenAlex := &MockProvider{
+			SourceID: "OpenAlex",
+			Articles: []domain.Article{{ID: "OA-1"}},
+		}
+
+		uc := usecase.NewSearchArticlesUseCase([]domain.ArticleProvider{mockOpenAlex})
+		filter := domain.SearchFilter{
+			Providers: []string{"Desconhecido"},
+		}
+
+		res, err := uc.Execute(context.Background(), "test", 10, filter)
+		if err != nil {
+			t.Fatalf("erro inesperado: %v", err)
+		}
+
+		if atomic.LoadInt32(&mockOpenAlex.Calls) != 0 {
+			t.Errorf("esperado 0 chamadas para OpenAlex, obtido %d", atomic.LoadInt32(&mockOpenAlex.Calls))
+		}
+		if len(res.Articles) != 0 {
+			t.Errorf("esperado 0 artigos, obtido %d", len(res.Articles))
 		}
 	})
 }
