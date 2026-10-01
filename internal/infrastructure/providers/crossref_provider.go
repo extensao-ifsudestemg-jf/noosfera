@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -191,7 +193,7 @@ func (p *CrossRefProvider) FetchArticles(ctx context.Context, query string, limi
 			URL:            articleURL,
 			Journal:        journal,
 			Citations:      item.IsReferencedByCount,
-			Abstract:       item.Abstract,
+			Abstract:       cleanAbstract(item.Abstract),
 			SourceProvider: "CrossRef",
 		}
 
@@ -199,4 +201,16 @@ func (p *CrossRefProvider) FetchArticles(ctx context.Context, query string, limi
 	}
 
 	return articles, nil
+}
+
+var xmlTagRegex = regexp.MustCompile(`<[^>]*>`)
+
+func cleanAbstract(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	unescaped := html.UnescapeString(raw)
+	stripped := xmlTagRegex.ReplaceAllString(unescaped, " ")
+	return strings.Join(strings.Fields(stripped), " ")
 }

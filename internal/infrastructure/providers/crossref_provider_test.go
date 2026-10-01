@@ -138,6 +138,42 @@ func TestCrossRefProvider_FetchArticles(t *testing.T) {
 			wantArticles:  []domain.Article{},
 			wantErr:       false,
 		},
+		{
+			name:           "Cenário 6 (Abstract com tags XML/JATS sanitizado)",
+			email:          "pesquisador@exemplo.com",
+			query:          "photonics",
+			limit:          1,
+			mockStatusCode: http.StatusOK,
+			mockResponse: crossRefResponse{
+				Status: "ok",
+				Message: crossRefMessage{
+					TotalResults: 1,
+					Items: []crossRefItem{
+						{
+							DOI:      "10.1000/182",
+							Title:    []string{"Sample Title"},
+							Abstract: "<jats:title>Abstract</jats:title><jats:p>This is a <jats:italic>sample</jats:italic> abstract &amp; overview.</jats:p>",
+						},
+					},
+				},
+			},
+			wantUserAgent: "Noosfera/1.0 (mailto:pesquisador@exemplo.com)",
+			wantArticles: []domain.Article{
+				{
+					ID:             "crossref:10.1000/182",
+					Title:          "Sample Title",
+					Authors:        []string{},
+					Year:           0,
+					DOI:            "10.1000/182",
+					URL:            "https://doi.org/10.1000/182",
+					Journal:        "",
+					Citations:      0,
+					Abstract:       "Abstract This is a sample abstract & overview.",
+					SourceProvider: "CrossRef",
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -211,4 +247,25 @@ func TestCrossRefProvider_GetSourceID(t *testing.T) {
 	}
 
 	provider.SetUserEmail("novo_email@dominio.com")
+}
+
+func TestCleanAbstract(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{input: "", expected: ""},
+		{input: "   ", expected: ""},
+		{input: "Simple abstract without tags.", expected: "Simple abstract without tags."},
+		{input: "<jats:p>Paragraph text.</jats:p>", expected: "Paragraph text."},
+		{input: "<jats:title>Title</jats:title><jats:p>First &amp; second <jats:bold>bold</jats:bold> item.</jats:p>", expected: "Title First & second bold item."},
+		{input: "  <jats:sec> <jats:p> Spaced </jats:p> </jats:sec> ", expected: "Spaced"},
+	}
+
+	for _, tc := range tests {
+		got := cleanAbstract(tc.input)
+		if got != tc.expected {
+			t.Errorf("cleanAbstract(%q) = %q, want %q", tc.input, got, tc.expected)
+		}
+	}
 }

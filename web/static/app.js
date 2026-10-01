@@ -26,6 +26,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsBody = document.getElementById('resultsBody');
     const colToggles = document.querySelectorAll('.col-toggle');
 
+    const abstractModal = document.getElementById('abstractModal');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const modalDismissBtn = document.getElementById('modalDismissBtn');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalAuthors = document.getElementById('modalAuthors');
+    const modalJournal = document.getElementById('modalJournal');
+    const modalYear = document.getElementById('modalYear');
+    const modalCitations = document.getElementById('modalCitations');
+    const modalDoi = document.getElementById('modalDoi');
+    const modalSourceBadge = document.getElementById('modalSourceBadge');
+    const modalAbstractContent = document.getElementById('modalAbstractContent');
+    const modalExternalLink = document.getElementById('modalExternalLink');
+
     function initTheme() {
         const savedTheme = localStorage.getItem('theme');
         const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)');
@@ -296,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (articles.length === 0) {
             resultsBody.innerHTML = `
                 <tr>
-                    <td colspan="8" class="empty-state">
+                    <td colspan="9" class="empty-state">
                         <div class="empty-state-icon">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="11" cy="11" r="8"></circle>
@@ -375,8 +388,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="col-citations text-right">${citations.toLocaleString('pt-BR')}</td>
                 <td class="col-doi">${doiContent}</td>
                 <td class="col-source text-center"><span class="source-badge source-${providerClass}">${providerName}</span></td>
+                <td class="col-actions text-center">
+                    <button class="btn-view-abstract" type="button" title="Ver Resumo" aria-label="Ver Resumo">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        <span>Resumo</span>
+                    </button>
+                </td>
             `;
             tr.insertAdjacentHTML('beforeend', colsHtml);
+
+            const btnAbstract = tr.querySelector('.btn-view-abstract');
+            if (btnAbstract) {
+                btnAbstract.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openAbstractModal(article);
+                });
+            }
+
             resultsBody.appendChild(tr);
         });
 
@@ -394,6 +428,86 @@ document.addEventListener('DOMContentLoaded', () => {
         errorText.textContent = msg;
         errorMessage.classList.remove('hidden');
     }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function openAbstractModal(article) {
+        if (!abstractModal) return;
+
+        modalTitle.textContent = article.title || 'Sem título';
+        modalAuthors.textContent = article.authors && article.authors.length ? article.authors.join(', ') : 'Não informado';
+        modalJournal.textContent = article.journal || 'Não informado';
+        modalYear.textContent = article.publication_year || article.publicationYear || article.year || 'Não informado';
+
+        const citations = article.citation_count !== undefined && article.citation_count !== null ? article.citation_count : (article.citations || 0);
+        modalCitations.textContent = citations.toLocaleString('pt-BR');
+
+        if (article.doi) {
+            const doiLink = article.doi.startsWith('http') ? article.doi : `https://doi.org/${article.doi}`;
+            modalDoi.innerHTML = `<a href="${doiLink}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.doi)}</a>`;
+        } else {
+            modalDoi.textContent = 'Não informado';
+        }
+
+        const providerName = article.source_provider || 'Desconhecido';
+        const providerClass = providerName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        modalSourceBadge.innerHTML = `<span class="source-badge source-${providerClass}">${escapeHtml(providerName)}</span>`;
+
+        const rawAbstract = (article.abstract || '').trim();
+        if (rawAbstract) {
+            modalAbstractContent.innerHTML = `<p class="modal-abstract-text">${escapeHtml(rawAbstract)}</p>`;
+        } else {
+            modalAbstractContent.innerHTML = `<p class="modal-abstract-empty">Resumo não disponibilizado publicamente pelo provedor indexador.</p>`;
+        }
+
+        const targetUrl = article.url || (article.doi ? (article.doi.startsWith('http') ? article.doi : `https://doi.org/${article.doi}`) : '');
+        if (targetUrl) {
+            modalExternalLink.href = targetUrl;
+            modalExternalLink.style.display = 'inline-flex';
+        } else {
+            modalExternalLink.style.display = 'none';
+        }
+
+        abstractModal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+        if (modalCloseBtn) modalCloseBtn.focus();
+    }
+
+    function closeAbstractModal() {
+        if (!abstractModal) return;
+        abstractModal.classList.add('hidden');
+        document.body.classList.remove('modal-open');
+    }
+
+    if (modalCloseBtn) {
+        modalCloseBtn.addEventListener('click', closeAbstractModal);
+    }
+
+    if (modalDismissBtn) {
+        modalDismissBtn.addEventListener('click', closeAbstractModal);
+    }
+
+    if (abstractModal) {
+        abstractModal.addEventListener('click', (e) => {
+            if (e.target === abstractModal) {
+                closeAbstractModal();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && abstractModal && !abstractModal.classList.contains('hidden')) {
+            closeAbstractModal();
+        }
+    });
 
     function exportToXmlSpreadsheet(articles) {
         const escapeXml = (str) => {
