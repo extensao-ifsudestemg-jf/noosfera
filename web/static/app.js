@@ -17,6 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const exportCsvBtn = document.getElementById('exportCsvBtn');
     const exportXlsxBtn = document.getElementById('exportXlsxBtn');
+    const exportBibBtn = document.getElementById('exportBibBtn');
+    const exportRisBtn = document.getElementById('exportRisBtn');
     const selectAllCheckbox = document.getElementById('selectAllCheckbox');
     const selectionCounter = document.getElementById('selectionCounter');
     
@@ -142,6 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (exportCsvBtn) exportCsvBtn.disabled = true;
             if (exportXlsxBtn) exportXlsxBtn.disabled = true;
+            if (exportBibBtn) exportBibBtn.disabled = true;
+            if (exportRisBtn) exportRisBtn.disabled = true;
             return;
         }
 
@@ -159,6 +163,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (selectionCounter) selectionCounter.classList.remove('has-selection');
             if (exportCsvBtn) exportCsvBtn.disabled = true;
             if (exportXlsxBtn) exportXlsxBtn.disabled = true;
+            if (exportBibBtn) exportBibBtn.disabled = true;
+            if (exportRisBtn) exportRisBtn.disabled = true;
         } else if (selectedCount === total) {
             if (selectAllCheckbox) {
                 selectAllCheckbox.checked = true;
@@ -167,6 +173,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (selectionCounter) selectionCounter.classList.add('has-selection');
             if (exportCsvBtn) exportCsvBtn.disabled = false;
             if (exportXlsxBtn) exportXlsxBtn.disabled = false;
+            if (exportBibBtn) exportBibBtn.disabled = false;
+            if (exportRisBtn) exportRisBtn.disabled = false;
         } else {
             if (selectAllCheckbox) {
                 selectAllCheckbox.checked = false;
@@ -175,6 +183,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (selectionCounter) selectionCounter.classList.add('has-selection');
             if (exportCsvBtn) exportCsvBtn.disabled = false;
             if (exportXlsxBtn) exportXlsxBtn.disabled = false;
+            if (exportBibBtn) exportBibBtn.disabled = false;
+            if (exportRisBtn) exportRisBtn.disabled = false;
         }
     }
 
@@ -573,6 +583,99 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (exportCsvBtn) exportCsvBtn.addEventListener('click', () => exportData('csv'));
     if (exportXlsxBtn) exportXlsxBtn.addEventListener('click', () => exportData('xlsx'));
+    if (exportBibBtn) exportBibBtn.addEventListener('click', () => exportData('bib'));
+    if (exportRisBtn) exportRisBtn.addEventListener('click', () => exportData('ris'));
+
+    function exportToBibTeX(articles) {
+        const seenKeys = new Map();
+        const entries = articles.map(article => {
+            let lastName = '';
+            if (article.authors && article.authors.length > 0) {
+                const firstAuth = (article.authors[0] || '').trim();
+                if (firstAuth.includes(',')) {
+                    lastName = firstAuth.split(',')[0].trim();
+                } else {
+                    const parts = firstAuth.split(/\s+/);
+                    lastName = parts[parts.length - 1] || '';
+                }
+            }
+            lastName = lastName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+            if (!lastName) lastName = 'article';
+
+            const yr = article.publication_year || article.publicationYear || article.year || '';
+            const baseKey = lastName + (yr || 'nodate');
+            let key = baseKey;
+            if (seenKeys.has(baseKey)) {
+                const count = seenKeys.get(baseKey);
+                seenKeys.set(baseKey, count + 1);
+                key = baseKey + String.fromCharCode(97 + count);
+            } else {
+                seenKeys.set(baseKey, 1);
+            }
+
+            const lines = [];
+            lines.push(`@article{${key},`);
+            if (article.title) lines.push(`  title = {${article.title}},`);
+            if (article.authors && article.authors.length > 0) {
+                lines.push(`  author = {${article.authors.join(' and ')}},`);
+            }
+            if (article.journal) lines.push(`  journal = {${article.journal}},`);
+            if (yr) lines.push(`  year = {${yr}},`);
+            if (article.doi) lines.push(`  doi = {${article.doi}},`);
+            if (article.url) lines.push(`  url = {${article.url}},`);
+            if (article.abstract) lines.push(`  abstract = {${article.abstract}},`);
+
+            let block = lines.join('\n');
+            if (block.endsWith(',')) {
+                block = block.slice(0, -1);
+            }
+            block += '\n}';
+            return block;
+        });
+
+        const bibContent = entries.join('\n\n') + '\n';
+        const blob = new Blob([bibContent], { type: 'application/x-bibtex;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'noosfera_artigos.bib';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function exportToRis(articles) {
+        const entries = articles.map(article => {
+            const lines = ['TY  - JOUR'];
+            if (article.title) lines.push(`TI  - ${article.title}`);
+            if (article.authors && article.authors.length > 0) {
+                article.authors.forEach(auth => {
+                    const trimmed = (auth || '').trim();
+                    if (trimmed) lines.push(`AU  - ${trimmed}`);
+                });
+            }
+            if (article.journal) lines.push(`JO  - ${article.journal}`);
+            const yr = article.publication_year || article.publicationYear || article.year;
+            if (yr) lines.push(`PY  - ${yr}`);
+            if (article.doi) lines.push(`DO  - ${article.doi}`);
+            if (article.url) lines.push(`UR  - ${article.url}`);
+            if (article.abstract) lines.push(`AB  - ${article.abstract}`);
+            lines.push('ER  - ');
+            return lines.join('\r\n');
+        });
+
+        const risContent = entries.join('\r\n\r\n') + '\r\n';
+        const blob = new Blob([risContent], { type: 'application/x-research-info-systems;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'noosfera_artigos.ris';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
 
     async function exportData(format) {
         const selectedArticles = currentArticles.filter(a => selectedIds.has(a._id));
@@ -596,6 +699,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     exportToXmlSpreadsheet(selectedArticles);
                     return;
                 }
+                if (format === 'bib' || format === 'bibtex') {
+                    exportToBibTeX(selectedArticles);
+                    return;
+                }
+                if (format === 'ris') {
+                    exportToRis(selectedArticles);
+                    return;
+                }
                 const errData = await response.json().catch(() => null);
                 const errorMsg = errData && errData.detail ? errData.detail : `Erro na exportação (Status: ${response.status})`;
                 throw new Error(errorMsg);
@@ -605,7 +716,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `noosfera_artigos.${format}`;
+            const ext = format === 'bib' || format === 'bibtex' ? 'bib' : format;
+            a.download = `noosfera_artigos.${ext}`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -614,6 +726,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             if (format === 'xlsx') {
                 exportToXmlSpreadsheet(selectedArticles);
+            } else if (format === 'bib' || format === 'bibtex') {
+                exportToBibTeX(selectedArticles);
+            } else if (format === 'ris') {
+                exportToRis(selectedArticles);
             } else {
                 alert(`Falha ao exportar: ${error.message}`);
             }

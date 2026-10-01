@@ -224,6 +224,69 @@ func TestArticleHandler_HandleExport(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:   "Cenário 3 (Exportação BibTeX)",
+			method: http.MethodPost,
+			requestBody: handlers.ExportRequestDTO{
+				Articles: mockArticles,
+				Format:   "bib",
+			},
+			expectedStatus: http.StatusOK,
+			verifyResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				contentType := rec.Header().Get("Content-Type")
+				if !strings.Contains(contentType, "x-bibtex") {
+					t.Errorf("esperado Content-Type contendo 'x-bibtex', obtido '%s'", contentType)
+				}
+				bodyStr := rec.Body.String()
+				expectedParts := []string{
+					"@article{one2025,",
+					"title = {Article with, comma}",
+					"author = {Author One and Author Two}",
+					"journal = {Awesome Journal}",
+					"year = {2025}",
+					"doi = {https://doi.org/10.123/xyz}",
+					"abstract = {Abstract text}",
+					"}",
+				}
+				for _, part := range expectedParts {
+					if !strings.Contains(bodyStr, part) {
+						t.Errorf("esperado trecho '%s' no corpo BibTeX:\n%s", part, bodyStr)
+					}
+				}
+			},
+		},
+		{
+			name:   "Cenário 4 (Exportação RIS)",
+			method: http.MethodPost,
+			requestBody: handlers.ExportRequestDTO{
+				Articles: mockArticles,
+				Format:   "ris",
+			},
+			expectedStatus: http.StatusOK,
+			verifyResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				contentType := rec.Header().Get("Content-Type")
+				if !strings.Contains(contentType, "research-info-systems") {
+					t.Errorf("esperado Content-Type contendo 'research-info-systems', obtido '%s'", contentType)
+				}
+				bodyStr := rec.Body.String()
+				expectedParts := []string{
+					"TY  - JOUR",
+					"TI  - Article with, comma",
+					"AU  - Author One",
+					"AU  - Author Two",
+					"JO  - Awesome Journal",
+					"PY  - 2025",
+					"DO  - https://doi.org/10.123/xyz",
+					"AB  - Abstract text",
+					"ER  - ",
+				}
+				for _, part := range expectedParts {
+					if !strings.Contains(bodyStr, part) {
+						t.Errorf("esperado trecho '%s' no corpo RIS:\n%s", part, bodyStr)
+					}
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {

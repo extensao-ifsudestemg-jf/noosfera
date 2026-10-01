@@ -149,9 +149,9 @@ body {
 
 .container {
     width: 100%;
-    max-width: min(94vw, 1560px);
+    max-width: 1720px;
     margin: 0 auto;
-    padding: 0 var(--spacing-md);
+    padding: 0 1.5rem;
 }
 
 .sr-only {
@@ -935,7 +935,7 @@ tbody tr.row-selected:hover {
 
 .col-title {
     min-width: 320px;
-    max-width: 480px;
+    max-width: 600px;
     white-space: normal;
     word-break: break-word;
     font-weight: 500;
@@ -958,7 +958,7 @@ tbody tr.row-selected:hover {
 
 .col-authors {
     min-width: 200px;
-    max-width: 280px;
+    max-width: 360px;
     white-space: normal;
     word-break: break-word;
     color: var(--text-secondary);
@@ -974,7 +974,7 @@ tbody tr.row-selected:hover {
 
 .col-journal {
     min-width: 170px;
-    max-width: 240px;
+    max-width: 300px;
     white-space: normal;
     word-break: break-word;
     color: var(--text-secondary);
