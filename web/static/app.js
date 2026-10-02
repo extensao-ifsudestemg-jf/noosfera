@@ -245,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (journalKeywordInput) journalKeywordInput.value = '';
             updateFilterBadge();
             updateProviderCompatibility();
+            showToast('Filtros redefinidos', 'info');
         });
     }
 
@@ -267,8 +268,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const checkAll = e.target.checked;
             if (checkAll) {
                 currentArticles.forEach(a => selectedIds.add(a._id));
+                showToast(`${currentArticles.length} artigos selecionados`, 'info');
             } else {
                 selectedIds.clear();
+                showToast('Seleção limpa', 'info');
             }
             const cbs = resultsBody.querySelectorAll('.article-checkbox');
             cbs.forEach(cb => {
@@ -413,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         loadingIndicator.classList.remove('hidden');
         errorMessage.classList.add('hidden');
-        resultsBody.innerHTML = '';
+        renderSkeleton(5);
         searchButton.disabled = true;
         selectedIds.clear();
         updateSelectionUI();
@@ -517,6 +520,9 @@ document.addEventListener('DOMContentLoaded', () => {
             currentArticles = filteredArticles;
             currentArticles.forEach(a => selectedIds.add(a._id));
             renderTable(filteredArticles);
+            if (filteredArticles.length > 0) {
+                showToast(`${filteredArticles.length} artigos encontrados com sucesso`, 'info');
+            }
 
         } catch (error) {
             showError(error.message);
@@ -655,6 +661,85 @@ document.addEventListener('DOMContentLoaded', () => {
     function showError(msg) {
         errorText.textContent = msg;
         errorMessage.classList.remove('hidden');
+        showToast(msg, 'error');
+    }
+
+    function showToast(message, type = 'success', duration = 3000) {
+        const toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+
+        let iconSvg = '';
+        if (type === 'success') {
+            iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>';
+        } else if (type === 'error') {
+            iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+        } else {
+            iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+        }
+
+        toast.innerHTML = `
+            <div class="toast-icon">${iconSvg}</div>
+            <div class="toast-text">${escapeHtml(message)}</div>
+        `;
+
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add('toast-hiding');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 250);
+        }, duration);
+    }
+
+    function renderSkeleton(count = 5) {
+        resultsBody.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            const tr = document.createElement('tr');
+            tr.className = 'skeleton-row';
+            tr.innerHTML = `
+                <td class="col-select text-center">
+                    <div class="skeleton-bar skeleton-checkbox"></div>
+                </td>
+                <td class="col-title">
+                    <div class="skeleton-bar" style="width: ${75 + (i % 3) * 8}%;"></div>
+                    <div class="skeleton-bar" style="width: ${45 + (i % 2) * 12}%; margin-top: 6px;"></div>
+                </td>
+                <td class="col-authors">
+                    <div class="skeleton-bar" style="width: ${65 + (i % 3) * 10}%;"></div>
+                </td>
+                <td class="col-year text-center">
+                    <div class="skeleton-bar" style="width: 44px; margin: 0 auto;"></div>
+                </td>
+                <td class="col-journal">
+                    <div class="skeleton-bar" style="width: ${60 + (i % 2) * 15}%;"></div>
+                </td>
+                <td class="col-citations text-right">
+                    <div class="skeleton-bar" style="width: 38px; margin-left: auto;"></div>
+                </td>
+                <td class="col-doi">
+                    <div class="skeleton-bar" style="width: 75px;"></div>
+                </td>
+                <td class="col-source text-center">
+                    <div class="skeleton-bar skeleton-badge"></div>
+                </td>
+                <td class="col-actions text-center">
+                    <div class="skeleton-bar skeleton-btn"></div>
+                </td>
+            `;
+            colToggles.forEach(checkbox => {
+                if (!checkbox.checked) {
+                    const colClass = checkbox.dataset.col;
+                    tr.querySelectorAll(`.${colClass}`).forEach(el => el.classList.add('col-hidden'));
+                }
+            });
+            resultsBody.appendChild(tr);
+        }
     }
 
     function escapeHtml(str) {
@@ -898,9 +983,12 @@ document.addEventListener('DOMContentLoaded', () => {
     async function exportData(format) {
         const selectedArticles = currentArticles.filter(a => selectedIds.has(a._id));
         if (!selectedArticles || selectedArticles.length === 0) {
-            alert('Nenhum artigo selecionado para exportação. Selecione pelo menos um artigo.');
+            showToast('Nenhum artigo selecionado para exportação.', 'error');
             return;
         }
+
+        const formatLabels = { csv: 'CSV', xlsx: 'XLSX', bib: 'BibTeX', bibtex: 'BibTeX', ris: 'RIS' };
+        const label = formatLabels[format.toLowerCase()] || format.toUpperCase();
 
         try {
             const response = await fetch('/api/v1/export', {
@@ -915,14 +1003,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) {
                 if (format === 'xlsx') {
                     exportToXmlSpreadsheet(selectedArticles);
+                    showToast(`${selectedArticles.length} artigos exportados em ${label} com sucesso`, 'success');
                     return;
                 }
                 if (format === 'bib' || format === 'bibtex') {
                     exportToBibTeX(selectedArticles);
+                    showToast(`${selectedArticles.length} artigos exportados em ${label} com sucesso`, 'success');
                     return;
                 }
                 if (format === 'ris') {
                     exportToRis(selectedArticles);
+                    showToast(`${selectedArticles.length} artigos exportados em ${label} com sucesso`, 'success');
                     return;
                 }
                 const errData = await response.json().catch(() => null);
@@ -940,16 +1031,20 @@ document.addEventListener('DOMContentLoaded', () => {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            showToast(`${selectedArticles.length} artigos exportados em ${label} com sucesso`, 'success');
             
         } catch (error) {
             if (format === 'xlsx') {
                 exportToXmlSpreadsheet(selectedArticles);
+                showToast(`${selectedArticles.length} artigos exportados em ${label} com sucesso`, 'success');
             } else if (format === 'bib' || format === 'bibtex') {
                 exportToBibTeX(selectedArticles);
+                showToast(`${selectedArticles.length} artigos exportados em ${label} com sucesso`, 'success');
             } else if (format === 'ris') {
                 exportToRis(selectedArticles);
+                showToast(`${selectedArticles.length} artigos exportados em ${label} com sucesso`, 'success');
             } else {
-                alert(`Falha ao exportar: ${error.message}`);
+                showToast(`Falha ao exportar: ${error.message}`, 'error');
             }
         }
     }
