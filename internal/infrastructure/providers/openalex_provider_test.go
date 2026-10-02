@@ -25,6 +25,9 @@ type openAlexMockWork struct {
 	Authorships           []openAlexMockAuthor `json:"authorships"`
 	CitedByCount          int                  `json:"cited_by_count"`
 	AbstractInvertedIndex map[string][]int     `json:"abstract_inverted_index"`
+	OpenAccess            *openAlexOpenAccess  `json:"open_access"`
+	Type                  string               `json:"type"`
+	Language              string               `json:"language"`
 }
 
 type openAlexMockLocation struct {
@@ -168,6 +171,74 @@ func TestOpenAlexProvider_FetchArticles(t *testing.T) {
 			},
 			wantArticles: nil,
 			wantErr:      true,
+		},
+		{
+			name:           "Cenário 6 (Filtros Avançados URL e Mapeamento)",
+			apiKey:         "",
+			query:          "machine learning",
+			limit:          5,
+			mockStatusCode: http.StatusOK,
+			mockResponse: openAlexMockResponse{
+				Results: []openAlexMockWork{
+					{
+						ID:              "https://openalex.org/W999",
+						DisplayName:     "ML Paper",
+						PublicationYear: 2022,
+						DOI:             "https://doi.org/10.123/ml",
+						PrimaryLocation: openAlexMockLocation{
+							Source: struct {
+								DisplayName string `json:"display_name"`
+							}{DisplayName: "ML Journal"},
+							LandingPageURL: "https://example.com/ml",
+						},
+						Authorships: []openAlexMockAuthor{
+							{Author: struct {
+								DisplayName string `json:"display_name"`
+							}{DisplayName: "Alice Smith"}},
+						},
+						CitedByCount: 10,
+						OpenAccess:   &openAlexOpenAccess{IsOpenAccess: true},
+						Type:         "article",
+						Language:     "pt",
+					},
+				},
+			},
+			mockDelay: 0,
+			setupContext: func() (context.Context, context.CancelFunc) {
+				trueVal := true
+				filter := domain.SearchFilter{
+					IsOpenAccess: &trueVal,
+					DocType:      "article",
+					Language:     "pt",
+					MinYear:      2020,
+					MaxYear:      2024,
+				}
+				ctx := context.WithValue(context.Background(), "search_filter", filter)
+				return ctx, func() {}
+			},
+			wantReqQuery: map[string]string{
+				"search":   "machine learning",
+				"per_page": "5",
+				"filter":   "is_oa:true,type:article,language:pt,from_publication_date:2020-01-01,to_publication_date:2024-12-31",
+			},
+			wantArticles: []domain.Article{
+				{
+					ID:             "openalex:https://openalex.org/W999",
+					Title:          "ML Paper",
+					Authors:        []string{"Alice Smith"},
+					Year:           2022,
+					DOI:            "https://doi.org/10.123/ml",
+					URL:            "https://example.com/ml",
+					Journal:        "ML Journal",
+					Citations:      10,
+					Abstract:       "",
+					IsOpenAccess:   func() *bool { b := true; return &b }(),
+					DocType:        "article",
+					Language:       "pt",
+					SourceProvider: "OpenAlex",
+				},
+			},
+			wantErr: false,
 		},
 	}
 

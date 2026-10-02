@@ -188,6 +188,16 @@ func (uc *SearchArticlesUseCase) Execute(ctx context.Context, query string, limi
 		activeProviders = filteredProviders
 	}
 
+	if strings.TrimSpace(filter.Language) != "" {
+		var langCompatible []domain.ArticleProvider
+		for _, p := range activeProviders {
+			if !strings.EqualFold(strings.TrimSpace(p.GetSourceID()), "crossref") {
+				langCompatible = append(langCompatible, p)
+			}
+		}
+		activeProviders = langCompatible
+	}
+
 	numProviders := len(activeProviders)
 	if numProviders == 0 {
 		return &SearchResult{
@@ -201,12 +211,13 @@ func (uc *SearchArticlesUseCase) Execute(ctx context.Context, query string, limi
 	ch := make(chan providerResult, numProviders)
 	var wg sync.WaitGroup
 
+	ctxWithFilter := context.WithValue(ctx, "search_filter", filter)
 	for i, p := range activeProviders {
 		wg.Add(1)
 		go func(idx int, provider domain.ArticleProvider) {
 			defer wg.Done()
 
-			articles, err := provider.FetchArticles(ctx, query, limit)
+			articles, err := provider.FetchArticles(ctxWithFilter, query, limit)
 			ch <- providerResult{
 				providerIndex: idx,
 				sourceID:      provider.GetSourceID(),

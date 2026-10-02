@@ -54,6 +54,13 @@ type openAlexWork struct {
 	Authorships           []openAlexAuthorship `json:"authorships"`
 	CitedByCount          int                  `json:"cited_by_count"`
 	AbstractInvertedIndex map[string][]int     `json:"abstract_inverted_index"`
+	OpenAccess            *openAlexOpenAccess  `json:"open_access"`
+	Type                  string               `json:"type"`
+	Language              string               `json:"language"`
+}
+
+type openAlexOpenAccess struct {
+	IsOpenAccess bool `json:"is_oa"`
 }
 
 type openAlexLocation struct {
@@ -82,6 +89,32 @@ func (p *OpenAlexProvider) FetchArticles(ctx context.Context, query string, limi
 	reqURL := fmt.Sprintf("%s%ssearch=%s&per_page=%d", p.baseURL, sep, url.QueryEscape(query), limit)
 	if p.apiKey != "" {
 		reqURL += fmt.Sprintf("&api_key=%s", url.QueryEscape(p.apiKey))
+	}
+
+	var alexFilters []string
+	if sf, ok := ctx.Value("search_filter").(domain.SearchFilter); ok {
+		if sf.IsOpenAccess != nil {
+			if *sf.IsOpenAccess {
+				alexFilters = append(alexFilters, "is_oa:true")
+			} else {
+				alexFilters = append(alexFilters, "is_oa:false")
+			}
+		}
+		if sf.DocType != "" {
+			alexFilters = append(alexFilters, "type:"+strings.ToLower(sf.DocType))
+		}
+		if sf.Language != "" {
+			alexFilters = append(alexFilters, "language:"+strings.ToLower(sf.Language))
+		}
+		if sf.MinYear > 0 {
+			alexFilters = append(alexFilters, fmt.Sprintf("from_publication_date:%d-01-01", sf.MinYear))
+		}
+		if sf.MaxYear > 0 {
+			alexFilters = append(alexFilters, fmt.Sprintf("to_publication_date:%d-12-31", sf.MaxYear))
+		}
+	}
+	if len(alexFilters) > 0 {
+		reqURL += "&filter=" + url.QueryEscape(strings.Join(alexFilters, ","))
 	}
 
 	log.Printf("[OpenAlex] Requisitando URL: %s", reqURL)
@@ -135,6 +168,11 @@ func (p *OpenAlexProvider) FetchArticles(ctx context.Context, query string, limi
 
 		abstract := buildAbstractFromInvertedIndex(work.AbstractInvertedIndex)
 
+		var isOA *bool
+		if work.OpenAccess != nil {
+			val := work.OpenAccess.IsOpenAccess
+			isOA = &val
+		}
 		article := domain.Article{
 			ID:             id,
 			Title:          work.DisplayName,
@@ -145,6 +183,9 @@ func (p *OpenAlexProvider) FetchArticles(ctx context.Context, query string, limi
 			Journal:        work.PrimaryLocation.Source.DisplayName,
 			Citations:      work.CitedByCount,
 			Abstract:       abstract,
+			IsOpenAccess:   isOA,
+			DocType:        work.Type,
+			Language:       work.Language,
 			SourceProvider: "OpenAlex",
 		}
 

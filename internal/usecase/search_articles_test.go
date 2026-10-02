@@ -476,4 +476,39 @@ func TestSearchArticlesUseCase_SelectiveFanOut(t *testing.T) {
 			t.Errorf("esperado 0 artigos, obtido %d", len(res.Articles))
 		}
 	})
+
+	t.Run("Filtro de Idioma Desativa CrossRef", func(t *testing.T) {
+		mockOpenAlex := &MockProvider{
+			SourceID: "OpenAlex",
+			Articles: []domain.Article{
+				{ID: "OA-1", Title: "Artigo em Português", Language: "pt"},
+			},
+		}
+		mockCrossRef := &MockProvider{
+			SourceID: "CrossRef",
+			Articles: []domain.Article{
+				{ID: "CR-1", Title: "Paper in English", Language: "en"},
+			},
+		}
+
+		uc := usecase.NewSearchArticlesUseCase([]domain.ArticleProvider{mockOpenAlex, mockCrossRef})
+		filter := domain.SearchFilter{
+			Language: "pt",
+		}
+
+		res, err := uc.Execute(context.Background(), "cancer", 10, filter)
+		if err != nil {
+			t.Fatalf("erro inesperado: %v", err)
+		}
+
+		if atomic.LoadInt32(&mockCrossRef.Calls) != 0 {
+			t.Errorf("esperado 0 chamadas para CrossRef quando Language está definido, obtido %d", atomic.LoadInt32(&mockCrossRef.Calls))
+		}
+		if atomic.LoadInt32(&mockOpenAlex.Calls) != 1 {
+			t.Errorf("esperado 1 chamada para OpenAlex, obtido %d", atomic.LoadInt32(&mockOpenAlex.Calls))
+		}
+		if len(res.Articles) != 1 || res.Articles[0].ID != "OA-1" {
+			t.Errorf("esperado 1 artigo retornado estritamente do OpenAlex, obtido %v", res.Articles)
+		}
+	})
 }

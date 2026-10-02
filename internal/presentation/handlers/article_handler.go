@@ -68,10 +68,24 @@ func (h *ArticleHandler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	minYear := req.MinYear
+	if req.YearFrom > 0 {
+		minYear = req.YearFrom
+	}
+	maxYear := req.MaxYear
+	if req.YearTo > 0 {
+		maxYear = req.YearTo
+	}
+
 	filter := domain.SearchFilter{
-		MinYear:      req.MinYear,
-		MinCitations: req.MinCitations,
-		Providers:    cleanProviders,
+		MinYear:        minYear,
+		MaxYear:        maxYear,
+		MinCitations:   req.MinCitations,
+		JournalKeyword: req.Journal,
+		Providers:      cleanProviders,
+		IsOpenAccess:   req.IsOpenAccess,
+		DocType:        strings.TrimSpace(req.DocType),
+		Language:       strings.TrimSpace(req.Language),
 	}
 
 	ctx := r.Context()

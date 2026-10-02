@@ -16,6 +16,7 @@ func TestCrossRefProvider_FetchArticles(t *testing.T) {
 		name            string
 		email           string
 		ctxEmail        string
+		ctxFilter       *domain.SearchFilter
 		query           string
 		limit           int
 		mockStatusCode  int
@@ -174,6 +175,63 @@ func TestCrossRefProvider_FetchArticles(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name:  "Cenário 7 (Filtros Avançados URL e Mapeamento)",
+			email: "pesquisador@exemplo.com",
+			ctxFilter: &domain.SearchFilter{
+				DocType: "article",
+				MinYear: 2021,
+				MaxYear: 2023,
+			},
+			query:          "distributed systems",
+			limit:          5,
+			mockStatusCode: http.StatusOK,
+			mockResponse: crossRefResponse{
+				Status: "ok",
+				Message: crossRefMessage{
+					TotalResults: 1,
+					Items: []crossRefItem{
+						{
+							DOI:      "10.1145/123456",
+							Title:    []string{"Distributed Consensus"},
+							Type:     "journal-article",
+							Language: "en",
+							License: []crossRefLicense{
+								{URL: "https://creativecommons.org/licenses/by/4.0/"},
+							},
+							PublishedPrint: &crossRefDate{
+								DateParts: [][]int{{2022}},
+							},
+							URL: "https://doi.org/10.1145/123456",
+						},
+					},
+				},
+			},
+			wantUserAgent: "Noosfera/1.0 (mailto:pesquisador@exemplo.com)",
+			wantQueryValues: map[string]string{
+				"query":  "distributed systems",
+				"rows":   "5",
+				"filter": "type:journal-article,from-pub-date:2021,until-pub-date:2023",
+			},
+			wantArticles: []domain.Article{
+				{
+					ID:             "crossref:10.1145/123456",
+					Title:          "Distributed Consensus",
+					Authors:        []string{},
+					Year:           2022,
+					DOI:            "10.1145/123456",
+					URL:            "https://doi.org/10.1145/123456",
+					Journal:        "",
+					Citations:      0,
+					Abstract:       "",
+					IsOpenAccess:   func() *bool { b := true; return &b }(),
+					DocType:        "journal-article",
+					Language:       "en",
+					SourceProvider: "CrossRef",
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -209,6 +267,9 @@ func TestCrossRefProvider_FetchArticles(t *testing.T) {
 			ctx := context.Background()
 			if tt.ctxEmail != "" {
 				ctx = context.WithValue(ctx, "user_email", tt.ctxEmail)
+			}
+			if tt.ctxFilter != nil {
+				ctx = context.WithValue(ctx, "search_filter", *tt.ctxFilter)
 			}
 
 			articles, err := provider.FetchArticles(ctx, tt.query, tt.limit)

@@ -394,3 +394,41 @@ func TestArticleHandler_HandleSearch_ProvidersQueryParam(t *testing.T) {
 	}
 }
 
+func TestArticleHandler_HandleSearch_AdvancedFilters(t *testing.T) {
+	mockUC := &ProviderCapturingSearchUseCase{}
+	handler := handlers.NewArticleHandler(mockUC)
+
+	body := bytes.NewBufferString(`{
+		"query": "artificial intelligence",
+		"limit": 10,
+		"is_open_access": true,
+		"doc_type": "review",
+		"language": "pt",
+		"year_from": 2018,
+		"year_to": 2024
+	}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/search", body)
+	rec := httptest.NewRecorder()
+
+	handler.HandleSearch(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("esperado status 200, obtido %d", rec.Code)
+	}
+	if mockUC.CapturedFilter.IsOpenAccess == nil || !*mockUC.CapturedFilter.IsOpenAccess {
+		t.Errorf("esperado IsOpenAccess = true, obtido %v", mockUC.CapturedFilter.IsOpenAccess)
+	}
+	if mockUC.CapturedFilter.DocType != "review" {
+		t.Errorf("esperado DocType = 'review', obtido %q", mockUC.CapturedFilter.DocType)
+	}
+	if mockUC.CapturedFilter.Language != "pt" {
+		t.Errorf("esperado Language = 'pt', obtido %q", mockUC.CapturedFilter.Language)
+	}
+	if mockUC.CapturedFilter.MinYear != 2018 {
+		t.Errorf("esperado MinYear = 2018, obtido %d", mockUC.CapturedFilter.MinYear)
+	}
+	if mockUC.CapturedFilter.MaxYear != 2024 {
+		t.Errorf("esperado MaxYear = 2024, obtido %d", mockUC.CapturedFilter.MaxYear)
+	}
+}
+

@@ -87,50 +87,115 @@
             <div class="providers-row">
                 <span class="providers-label">Fontes:</span>
                 <div class="provider-chips" role="group" aria-label="Seleção de bases científicas">
-                    <label class="provider-chip">
+                    <label class="provider-chip" id="chipOpenAlex">
                         <input type="checkbox" id="providerOpenAlex" class="provider-toggle" value="openalex" checked>
                         <span class="provider-badge-indicator openalex-dot"></span>
                         <span>OpenAlex</span>
                     </label>
-                    <label class="provider-chip">
+                    <label class="provider-chip" id="chipCrossRef">
                         <input type="checkbox" id="providerCrossRef" class="provider-toggle" value="crossref" checked>
                         <span class="provider-badge-indicator crossref-dot"></span>
                         <span>CrossRef</span>
                     </label>
                 </div>
+                <div class="providers-notice" id="providersNotice">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <span>Alguns filtros podem desativar certas fontes.</span>
+                </div>
             </div>
 
             <div class="filters-toggle-wrapper">
-                <button id="toggleFiltersBtn" class="btn btn-link" type="button" aria-expanded="false" aria-controls="filtersPanel">
+                <button id="toggleFiltersBtn" class="btn btn-link btn-filters-toggle" type="button" aria-expanded="false" aria-controls="filtersPanel">
+                    <svg class="filter-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
                     <span>Filtros Avançados</span>
+                    <span id="filtersBadge" class="filters-badge hidden">0</span>
                     <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
+                </button>
+                <button id="clearFiltersBtn" class="btn btn-clear-filters hidden" type="button" title="Limpar todos os filtros avançados">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    <span>Limpar Filtros</span>
                 </button>
             </div>
 
             <div id="filtersPanel" class="filters-panel collapsed">
                 <div class="filters-panel-inner">
-                    <div class="filters-grid">
-                        <div class="input-group">
-                            <label for="yearStart">Ano Início</label>
-                            <input type="number" id="yearStart" placeholder="Ex: 2018" min="1800" max="2100">
+                    <div class="advanced-filters-container">
+                        <div class="filter-group-block">
+                            <span class="filter-group-title">Acesso Aberto</span>
+                            <div class="filter-chips-row" role="group" aria-label="Filtro de Acesso Aberto">
+                                <button type="button" class="filter-chip active" data-filter-group="openaccess" data-value="all">Todos</button>
+                                <button type="button" class="filter-chip" data-filter-group="openaccess" data-value="true">🔓 Acesso Aberto</button>
+                            </div>
                         </div>
-                        <div class="input-group">
-                            <label for="yearEnd">Ano Fim</label>
-                            <input type="number" id="yearEnd" placeholder="Ex: 2026" min="1800" max="2100">
+
+                        <div class="filter-group-block">
+                            <span class="filter-group-title">Tipo de Recurso</span>
+                            <div class="filter-chips-row" role="group" aria-label="Filtro de Tipo de Recurso">
+                                <button type="button" class="filter-chip active" data-filter-group="doctype" data-value="all">Todos</button>
+                                <button type="button" class="filter-chip" data-filter-group="doctype" data-value="article">Artigo</button>
+                                <button type="button" class="filter-chip" data-filter-group="doctype" data-value="review">Revisão</button>
+                                <button type="button" class="filter-chip" data-filter-group="doctype" data-value="book-chapter">Capítulo de Livro</button>
+                                <button type="button" class="filter-chip" data-filter-group="doctype" data-value="proceedings-article">Conferência</button>
+                            </div>
                         </div>
-                        <div class="input-group">
-                            <label for="minCitations">Citações Mínimas</label>
-                            <input type="number" id="minCitations" placeholder="Ex: 10" min="0">
+
+                        <div class="filter-group-block">
+                            <span class="filter-group-title">Idioma</span>
+                            <div class="filter-chips-row" role="group" aria-label="Filtro de Idioma">
+                                <button type="button" class="filter-chip active" data-filter-group="language" data-value="all">Todos</button>
+                                <button type="button" class="filter-chip" data-filter-group="language" data-value="en">Inglês</button>
+                                <button type="button" class="filter-chip" data-filter-group="language" data-value="pt">Português</button>
+                                <button type="button" class="filter-chip" data-filter-group="language" data-value="es">Espanhol</button>
+                            </div>
                         </div>
-                        <div class="input-group">
-                            <label for="journalKeyword">Palavra-chave do Periódico</label>
-                            <input type="text" id="journalKeyword" placeholder="Ex: Nature, IEEE, Springer...">
+
+                        <div class="filter-group-block period-group-block">
+                            <span class="filter-group-title">Período de Publicação</span>
+                            <div class="period-controls-wrapper">
+                                <div class="filter-chips-row" role="group" aria-label="Atalhos de período de publicação">
+                                    <button type="button" class="filter-chip active" data-filter-group="period" data-value="all">Geral</button>
+                                    <button type="button" class="filter-chip" data-filter-group="period" data-value="5">Últimos 5 anos</button>
+                                    <button type="button" class="filter-chip" data-filter-group="period" data-value="10">Últimos 10 anos</button>
+                                </div>
+                                <div class="period-inputs-inline">
+                                    <div class="year-input-compact-group">
+                                        <label for="yearStart" class="year-label">De</label>
+                                        <input type="number" id="yearStart" class="year-input-compact" placeholder="Ano" min="1800" max="2100">
+                                    </div>
+                                    <div class="year-input-compact-group">
+                                        <label for="yearEnd" class="year-label">Até</label>
+                                        <input type="number" id="yearEnd" class="year-input-compact" placeholder="Ano" min="1800" max="2100">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="input-group input-group-full">
-                            <label for="crossref-email">E-mail de Contato (CrossRef Polite Pool)</label>
-                            <input type="email" id="crossref-email" placeholder="seu-email@instituicao.edu.br">
+
+                        <div class="filter-group-block secondary-filters-block">
+                            <div class="secondary-inputs-grid">
+                                <div class="input-group">
+                                    <label for="minCitations" class="input-label-compact">Citações Mínimas</label>
+                                    <input type="number" id="minCitations" class="input-compact" placeholder="Ex: 10" min="0">
+                                </div>
+                                <div class="input-group">
+                                    <label for="journalKeyword" class="input-label-compact">Palavra-chave do Periódico</label>
+                                    <input type="text" id="journalKeyword" class="input-compact" placeholder="Ex: Nature, IEEE, Springer...">
+                                </div>
+                                <div class="input-group input-group-email">
+                                    <label for="crossref-email" class="input-label-compact">E-mail Polite Pool (CrossRef)</label>
+                                    <input type="email" id="crossref-email" class="input-compact" placeholder="seu-email@instituicao.edu.br">
+                                </div>
+                            </div>
                             <div class="field-hint">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>

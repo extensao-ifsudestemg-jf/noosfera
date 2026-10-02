@@ -71,6 +71,13 @@ type crossRefItem struct {
 	IsReferencedByCount int              `json:"is-referenced-by-count"`
 	URL                 string           `json:"URL"`
 	Abstract            string           `json:"abstract"`
+	Type                string            `json:"type"`
+	Language            string            `json:"language"`
+	License             []crossRefLicense `json:"license"`
+}
+
+type crossRefLicense struct {
+	URL string `json:"URL"`
 }
 
 type crossRefAuthor struct {
@@ -97,6 +104,23 @@ func (p *CrossRefProvider) FetchArticles(ctx context.Context, query string, limi
 	}
 
 	reqURL := fmt.Sprintf("%s%squery=%s&rows=%d", p.baseURL, sep, url.QueryEscape(query), limit)
+
+	var crFilters []string
+	if sf, ok := ctx.Value("search_filter").(domain.SearchFilter); ok {
+		if sf.DocType != "" {
+			crType := mapDocTypeToCrossRef(sf.DocType)
+			crFilters = append(crFilters, "type:"+crType)
+		}
+		if sf.MinYear > 0 {
+			crFilters = append(crFilters, fmt.Sprintf("from-pub-date:%d", sf.MinYear))
+		}
+		if sf.MaxYear > 0 {
+			crFilters = append(crFilters, fmt.Sprintf("until-pub-date:%d", sf.MaxYear))
+		}
+	}
+	if len(crFilters) > 0 {
+		reqURL += "&filter=" + url.QueryEscape(strings.Join(crFilters, ","))
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
@@ -184,6 +208,12 @@ func (p *CrossRefProvider) FetchArticles(ctx context.Context, query string, limi
 			articleURL = "https://doi.org/" + doi
 		}
 
+		var isOA *bool
+		if len(item.License) > 0 {
+			val := true
+			isOA = &val
+		}
+
 		article := domain.Article{
 			ID:             id,
 			Title:          title,
@@ -194,6 +224,9 @@ func (p *CrossRefProvider) FetchArticles(ctx context.Context, query string, limi
 			Journal:        journal,
 			Citations:      item.IsReferencedByCount,
 			Abstract:       cleanAbstract(item.Abstract),
+			IsOpenAccess:   isOA,
+			DocType:        item.Type,
+			Language:       item.Language,
 			SourceProvider: "CrossRef",
 		}
 
@@ -201,6 +234,21 @@ func (p *CrossRefProvider) FetchArticles(ctx context.Context, query string, limi
 	}
 
 	return articles, nil
+}
+
+func mapDocTypeToCrossRef(docType string) string {
+	switch strings.ToLower(strings.TrimSpace(docType)) {
+	case "article", "artigo":
+		return "journal-article"
+	case "book-chapter", "capítulo de livro", "chapter":
+		return "book-chapter"
+	case "conference", "conferência", "proceedings":
+		return "proceedings-article"
+	case "review", "revisão":
+		return "journal-article"
+	default:
+		return strings.ToLower(strings.TrimSpace(docType))
+	}
 }
 
 var xmlTagRegex = regexp.MustCompile(`<[^>]*>`)

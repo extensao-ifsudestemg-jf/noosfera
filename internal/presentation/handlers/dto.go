@@ -8,9 +8,16 @@ type SearchRequestDTO struct {
 	Query        string   `json:"query"`
 	Limit        int      `json:"limit"`
 	MinYear      int      `json:"min_year"`
+	MaxYear      int      `json:"max_year,omitempty"`
+	YearFrom     int      `json:"year_from,omitempty"`
+	YearTo       int      `json:"year_to,omitempty"`
 	MinCitations int      `json:"min_citations"`
+	Journal      string   `json:"journal,omitempty"`
 	UserEmail    string   `json:"user_email,omitempty"`
 	Providers    []string `json:"providers,omitempty"`
+	IsOpenAccess *bool    `json:"is_open_access,omitempty"`
+	DocType      string   `json:"doc_type,omitempty"`
+	Language     string   `json:"language,omitempty"`
 }
 
 type SearchResponseDTO struct {

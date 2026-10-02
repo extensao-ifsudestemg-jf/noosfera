@@ -6,22 +6,33 @@ import (
 )
 
 func TestSearchFilter_Apply(t *testing.T) {
+	trueVal := true
+	falseVal := false
 
 	mockArticles := []Article{
 		{
-			Year:      2019,
-			Citations: 5,
-			Journal:   "IEEE Transactions on Software Engineering",
+			Year:         2019,
+			Citations:    5,
+			Journal:      "IEEE Transactions on Software Engineering",
+			IsOpenAccess: &falseVal,
+			DocType:      "journal-article",
+			Language:     "en",
 		},
 		{
-			Year:      2021,
-			Citations: 50,
-			Journal:   "Nature Machine Intelligence",
+			Year:         2021,
+			Citations:    50,
+			Journal:      "Nature Machine Intelligence",
+			IsOpenAccess: &trueVal,
+			DocType:      "review",
+			Language:     "en",
 		},
 		{
-			Year:      2024,
-			Citations: 150,
-			Journal:   "ACM Computing Surveys",
+			Year:         2024,
+			Citations:    150,
+			Journal:      "ACM Computing Surveys",
+			IsOpenAccess: &trueVal,
+			DocType:      "book-chapter",
+			Language:     "pt",
 		},
 	}
 
@@ -91,6 +102,52 @@ func TestSearchFilter_Apply(t *testing.T) {
 			},
 			expected: []Article{},
 		},
+		{
+			name: "Filtro por Acesso Aberto (IsOpenAccess = true)",
+			filter: SearchFilter{
+				IsOpenAccess: &trueVal,
+			},
+			expected: []Article{
+				mockArticles[1],
+				mockArticles[2],
+			},
+		},
+		{
+			name: "Filtro por Acesso Aberto (IsOpenAccess = false)",
+			filter: SearchFilter{
+				IsOpenAccess: &falseVal,
+			},
+			expected: []Article{
+				mockArticles[0],
+			},
+		},
+		{
+			name: "Filtro por DocType específico (review)",
+			filter: SearchFilter{
+				DocType: "review",
+			},
+			expected: []Article{
+				mockArticles[1],
+			},
+		},
+		{
+			name: "Filtro por DocType normalizado (article)",
+			filter: SearchFilter{
+				DocType: "article",
+			},
+			expected: []Article{
+				mockArticles[0],
+			},
+		},
+		{
+			name: "Filtro por Idioma (Language = pt)",
+			filter: SearchFilter{
+				Language: "pt",
+			},
+			expected: []Article{
+				mockArticles[2],
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -106,4 +163,20 @@ func TestSearchFilter_Apply(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("Filtro por Idioma descarta estritamente artigos sem idioma ou diferentes", func(t *testing.T) {
+		articles := []Article{
+			{ID: "1", Language: "pt"},
+			{ID: "2", Language: "en"},
+			{ID: "3", Language: ""},
+			{ID: "4", Language: "   "},
+		}
+
+		filter := SearchFilter{Language: "pt"}
+		got := filter.Apply(articles)
+
+		if len(got) != 1 || got[0].ID != "1" {
+			t.Errorf("esperado apenas o artigo com Language='pt', obtido %v", got)
+		}
+	})
 }

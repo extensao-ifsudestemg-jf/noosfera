@@ -13,6 +13,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchButton = document.getElementById('searchButton');
     const toggleFiltersBtn = document.getElementById('toggleFiltersBtn');
     const filtersPanel = document.getElementById('filtersPanel');
+    const filtersBadge = document.getElementById('filtersBadge');
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    const filterChips = document.querySelectorAll('.filter-chip');
+    const chipCrossRef = document.getElementById('chipCrossRef');
+    const providerCrossRef = document.getElementById('providerCrossRef');
+    const providersNotice = document.getElementById('providersNotice');
+    let crossRefUserWasChecked = providerCrossRef ? providerCrossRef.checked : true;
     const themeToggleBtn = document.getElementById('themeToggleBtn');
     
     const exportCsvBtn = document.getElementById('exportCsvBtn');
@@ -90,6 +97,154 @@ document.addEventListener('DOMContentLoaded', () => {
             const isExpanded = !isCollapsed;
             e.currentTarget.classList.toggle('active', isExpanded);
             e.currentTarget.setAttribute('aria-expanded', isExpanded.toString());
+        });
+    }
+
+    function updateFilterBadge() {
+        let count = 0;
+        const oaChip = document.querySelector('.filter-chip.active[data-filter-group="openaccess"]');
+        if (oaChip && oaChip.dataset.value !== 'all') count++;
+
+        const dtChip = document.querySelector('.filter-chip.active[data-filter-group="doctype"]');
+        if (dtChip && dtChip.dataset.value !== 'all') count++;
+
+        const langChip = document.querySelector('.filter-chip.active[data-filter-group="language"]');
+        if (langChip && langChip.dataset.value !== 'all') count++;
+
+        if ((yearStartInput && yearStartInput.value.trim()) || (yearEndInput && yearEndInput.value.trim())) count++;
+        if (minCitationsInput && minCitationsInput.value.trim() && parseInt(minCitationsInput.value) > 0) count++;
+        if (journalKeywordInput && journalKeywordInput.value.trim()) count++;
+
+        if (count > 0) {
+            if (filtersBadge) {
+                filtersBadge.textContent = count;
+                filtersBadge.classList.remove('hidden');
+            }
+            if (clearFiltersBtn) {
+                clearFiltersBtn.classList.remove('hidden');
+            }
+        } else {
+            if (filtersBadge) {
+                filtersBadge.classList.add('hidden');
+            }
+            if (clearFiltersBtn) {
+                clearFiltersBtn.classList.add('hidden');
+            }
+        }
+    }
+
+    function updatePeriodChipsFromInputs() {
+        const currentYear = new Date().getFullYear();
+        const yStart = parseInt(yearStartInput.value);
+        const yEnd = parseInt(yearEndInput.value);
+        const periodChips = document.querySelectorAll('.filter-chip[data-filter-group="period"]');
+        periodChips.forEach(c => c.classList.remove('active'));
+
+        if (!yearStartInput.value.trim() && !yearEndInput.value.trim()) {
+            const allChip = document.querySelector('.filter-chip[data-filter-group="period"][data-value="all"]');
+            if (allChip) allChip.classList.add('active');
+        } else if (yStart === currentYear - 4 && yEnd === currentYear) {
+            const fiveChip = document.querySelector('.filter-chip[data-filter-group="period"][data-value="5"]');
+            if (fiveChip) fiveChip.classList.add('active');
+        } else if (yStart === currentYear - 9 && yEnd === currentYear) {
+            const tenChip = document.querySelector('.filter-chip[data-filter-group="period"][data-value="10"]');
+            if (tenChip) tenChip.classList.add('active');
+        }
+        updateFilterBadge();
+    }
+
+    filterChips.forEach(chip => {
+        chip.addEventListener('click', (e) => {
+            const group = e.currentTarget.dataset.filterGroup;
+            const val = e.currentTarget.dataset.value;
+
+            if (group === 'period') {
+                document.querySelectorAll('.filter-chip[data-filter-group="period"]').forEach(c => c.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                const currentYear = new Date().getFullYear();
+                if (val === 'all') {
+                    if (yearStartInput) yearStartInput.value = '';
+                    if (yearEndInput) yearEndInput.value = '';
+                } else if (val === '5') {
+                    if (yearStartInput) yearStartInput.value = currentYear - 4;
+                    if (yearEndInput) yearEndInput.value = currentYear;
+                } else if (val === '10') {
+                    if (yearStartInput) yearStartInput.value = currentYear - 9;
+                    if (yearEndInput) yearEndInput.value = currentYear;
+                }
+            } else if (group) {
+                document.querySelectorAll(`.filter-chip[data-filter-group="${group}"]`).forEach(c => c.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+            }
+            updateFilterBadge();
+            updateProviderCompatibility();
+        });
+    });
+
+    if (providerCrossRef) {
+        providerCrossRef.addEventListener('change', () => {
+            if (!providerCrossRef.disabled) {
+                crossRefUserWasChecked = providerCrossRef.checked;
+            }
+        });
+    }
+
+    if (chipCrossRef) {
+        chipCrossRef.addEventListener('click', (e) => {
+            if (chipCrossRef.classList.contains('incompatible')) {
+                e.preventDefault();
+            }
+        });
+    }
+
+    function updateProviderCompatibility() {
+        const langChip = document.querySelector('.filter-chip.active[data-filter-group="language"]');
+        const selectedLang = langChip ? langChip.dataset.value : 'all';
+        const hasSpecificLanguage = selectedLang && selectedLang !== 'all';
+
+        if (hasSpecificLanguage) {
+            if (chipCrossRef) {
+                chipCrossRef.classList.add('incompatible');
+                chipCrossRef.setAttribute('title', 'Esta fonte foi desativada pois não suporta filtragem estrita por idioma.');
+            }
+            if (providerCrossRef) {
+                providerCrossRef.checked = false;
+                providerCrossRef.disabled = true;
+            }
+        } else {
+            if (chipCrossRef) {
+                chipCrossRef.classList.remove('incompatible');
+                chipCrossRef.removeAttribute('title');
+            }
+            if (providerCrossRef) {
+                providerCrossRef.disabled = false;
+                providerCrossRef.checked = crossRefUserWasChecked;
+            }
+        }
+    }
+
+    updateProviderCompatibility();
+
+    if (yearStartInput) yearStartInput.addEventListener('input', updatePeriodChipsFromInputs);
+    if (yearEndInput) yearEndInput.addEventListener('input', updatePeriodChipsFromInputs);
+    if (minCitationsInput) minCitationsInput.addEventListener('input', updateFilterBadge);
+    if (journalKeywordInput) journalKeywordInput.addEventListener('input', updateFilterBadge);
+
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-chip').forEach(c => {
+                if (c.dataset.value === 'all') {
+                    c.classList.add('active');
+                } else {
+                    c.classList.remove('active');
+                }
+            });
+            if (yearStartInput) yearStartInput.value = '';
+            if (yearEndInput) yearEndInput.value = '';
+            if (minCitationsInput) minCitationsInput.value = '';
+            if (journalKeywordInput) journalKeywordInput.value = '';
+            updateFilterBadge();
+            updateProviderCompatibility();
         });
     }
 
@@ -215,6 +370,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxYear = maxYearStr ? parseInt(maxYearStr) : 0;
         const journalKeyword = journalKeywordInput.value.trim().toLowerCase();
 
+        const oaChip = document.querySelector('.filter-chip.active[data-filter-group="openaccess"]');
+        let isOpenAccess = null;
+        if (oaChip && oaChip.dataset.value === 'true') {
+            isOpenAccess = true;
+        }
+
+        const dtChip = document.querySelector('.filter-chip.active[data-filter-group="doctype"]');
+        const docType = (dtChip && dtChip.dataset.value !== 'all') ? dtChip.dataset.value : '';
+
+        const langChip = document.querySelector('.filter-chip.active[data-filter-group="language"]');
+        const language = (langChip && langChip.dataset.value !== 'all') ? langChip.dataset.value : '';
+
         const userEmail = crossrefEmailInput ? crossrefEmailInput.value.trim() : '';
         if (userEmail) {
             localStorage.setItem('crossref_email', userEmail);
@@ -225,13 +392,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const providerCheckboxes = document.querySelectorAll('.provider-toggle');
         const selectedProviders = [];
         providerCheckboxes.forEach(cb => {
-            if (cb.checked) {
+            if (cb.checked && !cb.disabled) {
+                if (language && cb.value.toLowerCase() === 'crossref') {
+                    return;
+                }
                 selectedProviders.push(cb.value);
             }
         });
 
         if (selectedProviders.length === 0) {
-            showError('Selecione pelo menos uma fonte de busca (OpenAlex ou CrossRef).');
+            showError('Selecione pelo menos uma fonte de busca ativa.');
             return;
         }
 
@@ -253,9 +423,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 query: query,
                 limit: limit,
                 min_year: minYear,
+                max_year: maxYear,
+                year_from: minYear,
+                year_to: maxYear,
                 min_citations: minCitations,
+                journal: journalKeyword,
                 providers: selectedProviders
             };
+
+            if (isOpenAccess !== null) {
+                searchPayload.is_open_access = isOpenAccess;
+            }
+            if (docType) {
+                searchPayload.doc_type = docType;
+            }
+            if (language) {
+                searchPayload.language = language;
+            }
 
             if (userEmail) {
                 searchPayload.user_email = userEmail;
@@ -280,16 +464,48 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             let filteredArticles = data.articles || [];
 
+            if (minYear > 0) {
+                filteredArticles = filteredArticles.filter(a => {
+                    const yr = a.publication_year || a.publicationYear || a.year || 0;
+                    return yr >= minYear || yr === 0;
+                });
+            }
             if (maxYear > 0) {
                 filteredArticles = filteredArticles.filter(a => {
                     const yr = a.publication_year || a.publicationYear || a.year || 0;
-                    return yr <= maxYear && yr > 0;
+                    return (yr <= maxYear && yr > 0) || yr === 0;
                 });
             }
             if (journalKeyword) {
                 filteredArticles = filteredArticles.filter(a => 
                     a.journal && a.journal.toLowerCase().includes(journalKeyword)
                 );
+            }
+            if (isOpenAccess !== null) {
+                filteredArticles = filteredArticles.filter(a => {
+                    if (a.is_open_access !== undefined && a.is_open_access !== null) {
+                        return a.is_open_access === isOpenAccess;
+                    }
+                    return true;
+                });
+            }
+            if (docType) {
+                filteredArticles = filteredArticles.filter(a => {
+                    if (!a.doc_type) return true;
+                    const dt = a.doc_type.toLowerCase();
+                    const f = docType.toLowerCase();
+                    if (f === 'article') return dt === 'article' || dt === 'journal-article';
+                    if (f === 'review') return dt === 'review' || dt === 'review-article';
+                    if (f === 'book-chapter') return dt === 'book-chapter' || dt === 'chapter';
+                    if (f === 'proceedings-article') return dt === 'proceedings-article' || dt === 'conference-paper' || dt === 'proceedings';
+                    return dt === f;
+                });
+            }
+            if (language) {
+                filteredArticles = filteredArticles.filter(a => {
+                    if (!a.language) return true;
+                    return a.language.toLowerCase() === language.toLowerCase();
+                });
             }
 
             filteredArticles.forEach((a, idx) => {
@@ -371,9 +587,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             
+            const isOa = article.is_open_access === true;
+            const oaBadge = isOa ? '<span class="oa-pill" title="Artigo em Acesso Aberto">🔓 OA</span> ' : '';
             const titleContent = article.url 
-                ? `<a href="${article.url}" target="_blank" rel="noopener noreferrer" title="Acessar publicação">${article.title}</a>`
-                : article.title;
+                ? `<a href="${article.url}" target="_blank" rel="noopener noreferrer" title="Acessar publicação">${oaBadge}${article.title}</a>`
+                : `${oaBadge}${article.title}`;
                 
             let doiContent = '-';
             if (article.doi) {

@@ -10,5 +10,8 @@ type Article struct {
 	Journal        string   `json:"journal"`
 	Citations      int      `json:"citation_count"`
 	Abstract       string   `json:"abstract"`
+	IsOpenAccess   *bool    `json:"is_open_access,omitempty"`
+	DocType        string   `json:"doc_type,omitempty"`
+	Language       string   `json:"language,omitempty"`
 	SourceProvider string   `json:"source_provider"`
 }
