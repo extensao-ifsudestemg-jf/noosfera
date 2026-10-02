@@ -1,27 +1,27 @@
 :root {
-    --color-bg-base: #0b1320;
-    --color-bg-surface: #111c30;
-    --color-bg-surface-elevated: #16243d;
-    --color-bg-card: rgba(17, 28, 48, 0.75);
-    --color-bg-glass: rgba(17, 28, 48, 0.6);
+    --color-bg-base: #0B0F19;
+    --color-bg-surface: #111827;
+    --color-bg-surface-elevated: #1F2937;
+    --color-bg-card: rgba(17, 24, 39, 0.7);
+    --color-bg-glass: rgba(17, 24, 39, 0.6);
 
-    --color-text-main: #f8fafc;
-    --color-text-muted: #94a3b8;
-    --color-text-dim: #64748b;
+    --color-text-main: #F8FAFC;
+    --color-text-muted: #94A3B8;
+    --color-text-dim: #64748B;
 
-    --color-if-green: #16a34a;
-    --color-if-green-hover: #15803d;
-    --color-if-green-glow: rgba(22, 163, 74, 0.25);
+    --color-if-green: #22C55E;
+    --color-if-green-hover: #16A34A;
+    --color-if-green-glow: rgba(34, 197, 94, 0.25);
 
-    --color-if-red: #dc2626;
-    --color-if-red-hover: #b91c1c;
-    --color-if-red-glow: rgba(220, 38, 38, 0.25);
+    --color-if-red: #EF4444;
+    --color-if-red-hover: #DC2626;
+    --color-if-red-glow: rgba(239, 68, 68, 0.25);
 
-    --color-brand-indigo: #6366f1;
+    --color-brand-indigo: #6366F1;
     --color-brand-indigo-glow: rgba(99, 102, 241, 0.25);
 
-    --color-border-subtle: rgba(255, 255, 255, 0.08);
-    --color-border-focus: rgba(22, 163, 74, 0.4);
+    --color-border-subtle: rgba(255, 255, 255, 0.07);
+    --color-border-focus: rgba(99, 102, 241, 0.4);
 
     --shadow-soft: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
     --shadow-glow: 0 0 25px rgba(22, 163, 74, 0.2);
@@ -211,14 +211,27 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(22, 163, 74, 0.12);
-    border: 1px solid rgba(22, 163, 74, 0.35);
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.35);
     padding: 0.35rem 1rem;
     border-radius: var(--radius-full);
     font-size: 0.82rem;
     font-weight: 600;
     color: #4ade80;
     margin-bottom: 1.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.badge-version {
+    background: rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    padding: 0.15rem 0.6rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
 }
 
 .badge-dot {
@@ -428,6 +441,144 @@ body {
     font-size: 0.9rem;
 }
 
+.mockup-providers-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    flex-wrap: wrap;
+}
+
+.mockup-label {
+    font-size: 0.725rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-text-dim);
+    letter-spacing: 0.05em;
+}
+
+.mockup-chips {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.mockup-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.65rem;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--color-border-subtle);
+    font-size: 0.775rem;
+    color: #cbd5e1;
+}
+
+.mockup-chip.active {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.35);
+    color: #e0e7ff;
+    font-weight: 600;
+}
+
+.mockup-chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.openalex-dot {
+    background-color: #38bdf8;
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+}
+
+.crossref-dot {
+    background-color: #34d399;
+    box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+}
+
+.mockup-filter-toggle {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: #a5b4fc;
+    background: rgba(99, 102, 241, 0.12);
+    padding: 0.2rem 0.65rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    font-weight: 500;
+}
+
+.mockup-controls-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.6rem 0.85rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.mockup-selection-badge {
+    font-size: 0.775rem;
+    font-weight: 600;
+    color: #818cf8;
+    background: rgba(99, 102, 241, 0.15);
+    padding: 0.2rem 0.65rem;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.mockup-export-buttons {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.mockup-export-btn {
+    font-size: 0.725rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--color-border-subtle);
+    color: var(--color-text-muted);
+}
+
+.mockup-export-btn.active {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.35);
+    color: #4ade80;
+}
+
+.mockup-oa-pill {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    margin-right: 0.35rem;
+    vertical-align: middle;
+}
+
+.mockup-btn-abstract {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-full);
+    background: rgba(99, 102, 241, 0.12);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
 .mockup-table {
     width: 100%;
     border-collapse: collapse;
@@ -568,6 +719,24 @@ body {
     background: rgba(220, 38, 38, 0.12);
     border-color: rgba(220, 38, 38, 0.3);
     color: #f87171;
+}
+
+.feature-card:nth-child(4) .feature-icon-wrapper {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+}
+
+.feature-card:nth-child(5) .feature-icon-wrapper {
+    background: rgba(14, 165, 233, 0.12);
+    border-color: rgba(14, 165, 233, 0.3);
+    color: #38bdf8;
+}
+
+.feature-card:nth-child(6) .feature-icon-wrapper {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #34d399;
 }
 
 .feature-title {
